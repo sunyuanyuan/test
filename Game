@@ -1,0 +1,445 @@
+Game.java
+import javax.swing.*;
+
+
+public class Game {
+
+
+public static void main(String[] args) {
+
+GameFrame GFrame=new GameFrame();
+GFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+GFrame.setVisible(true);
+}
+
+}
+
+GameFrame.java
+import java.awt.*;
+import javax.swing.*;
+
+
+class GameFrame extends JFrame {
+
+private static final int Width=570;
+private static final int Height=470;
+
+GameFrame(){
+setTitle("五子棋游戏");
+CenteredFrame();
+setSize(Width,Height); 
+GamePanel Gpanel=new GamePanel();
+add(Gpanel); 
+}
+
+void CenteredFrame(){
+Toolkit kit=Toolkit.getDefaultToolkit();
+Dimension screenSize=kit.getScreenSize();
+int screenHeight=screenSize.height;
+int screenWidth=screenSize.width;
+
+int Xposition=(screenWidth-Width)/2;
+int Yposition=(screenHeight-Height)/2;
+setLocation(Xposition,Yposition);
+}
+}
+
+GamePanel.java
+
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+
+ 
+
+
+class GamePanel extends JPanel {
+
+private Point cursor=new Point(40,60); //棋盘坐标
+private int[][] ChessState=new int[18][18];//棋盘状态 
+private int i=0;//横坐标　　　
+private int j=0;//纵坐标
+private final static int testnum=5;//五子棋的规定棋子数
+private Player Black=new Player(1,Color.BLACK,"黑方");//黑方棋子
+private Player White=new Player(2,Color.WHITE,"白方");//白方棋子
+private Player Cplayer=null;//当前用户的引用
+private JTextField textBlack=new JTextField("",5);//黑方文本提示框对象和文本长度设置
+private JTextField textWhite=new JTextField("",5);//白方文本提示框对象和文本长度设置
+private String Nothing="";
+private String textblack="请黑方下子";//黑方提示文本
+private String textwhite="请白方下子";//白方提示文本
+
+
+GamePanel(){
+setLayout(null);
+Initialization();
+setFocusable(true);
+
+JButton Rutton=new JButton("重新开局");
+Rutton.setBounds(20,14,100,26);
+RestartListener restart=new RestartListener();
+Rutton.addActionListener(restart);
+add(Rutton);
+
+
+textBlack.setHorizontalAlignment(JTextField.CENTER);
+textBlack.setBounds(150,14,110,26);
+textBlack.setEditable(false);
+add(textBlack);
+
+
+textWhite.setHorizontalAlignment(JTextField.CENTER);+ textWhite.setBounds(290,14,110,26);
+textWhite.setEditable(false);
+add(textWhite);
+
+JTextArea gInstruction=new JTextArea();
+gInstruction.setSelectedTextColor(new Color(238,238,238));
+String gSInstruction=
+"Play1(黑方) Key \nup--------W \ndown----S \nleft--------A \nright------F \n\n"+
+"Play2(白方) Key \nup--------up \ndown----down \nleft--------left \nright------right \n\n"+
+"Exit game: \nPress Esc";
+gInstruction.setText(gSInstruction);
+gInstruction.setEditable(false);
+gInstruction.setBounds(440,60,100,340);
+add(gInstruction);
+
+ChessManPerformListener Perform=new ChessManPerformListener();
+addKeyListener(Perform);
+
+}
+
+// 设置第一个JTextField输出"请黑方下棋",坐标为(40,60)
+void Initialization(){ 
+for(int i=0,j;i<18;i++)
+for(j=0;j<18;j++){
+ChessState[i][j]=0; 
+}
+cursor.setLocation(40,60);
+Cplayer=Black;
+textBlack.setText(textblack);
+textWhite.setText(Nothing);
+}
+
+
+//画棋盘和初始化棋局状态
+protected void paintComponent(Graphics g){
+super.paintComponent(g);
+Graphics2D g2=(Graphics2D) g;
+
+for(int i=60;i<=400;i+=20){
+g2.drawLine(40,i,380,i);
+}
+for(int j=40;j<=380;j+=20){
+g2.drawLine(j,60,j,400);
+}
+g2.drawString("_",cursor.x-6,cursor.y);
+g2.drawString("_",cursor.x,cursor.y);
+
+for(i=0;i<18;i++)
+for(j=0;j<18;j++){
+if(ChessState[i][j]!=0){
+if(ChessState[i][j]==1){
+g2.setPaint(Black.getplayerChessManColor()); 
+}
+if(ChessState[i][j]==2){
+g2.setPaint(White.getplayerChessManColor());
+}
+g2.fillOval(j*20+40-10, i*20+60-10, ChessMan.getChessManSize(), ChessMan.getChessManSize());
+}
+}
+}
+
+
+
+//判断棋盘的当前位置是否已有棋子
+boolean isChessState(){ 
+this.j=(cursor.x-40)/20;
+this.i=(cursor.y-60)/20;
+if(ChessState[this.i][this.j]!=0)
+return true;
+else
+return false; 
+}
+
+
+
+
+//记录落子后棋盘的当前位置的状态
+void RecordChessState(){
+this.j=(cursor.x-40)/20;
+this.i=(cursor.y-60)/20;
+ChessState[this.i][this.j]=Cplayer.getCurrentIdentify();
+}
+
+
+
+
+
+
+//判断当前玩家落子后是否赢了
+void JudgeWin(){
+for(int i=0;i<4;i++)
+if(JudgeWinLine(i)){
+//提示当前玩家已经获得胜利
+try{
+String Ginformation="GameInformation";
+String Message="恭喜玩家"+Cplayer.getsIdentify()+"获胜!"+"\n"+"继续游戏还是退出游戏?";
+String[] options = {"继续","退出"};
+int selection=JOptionPane.showOptionDialog(null,Message,Ginformation,
+JOptionPane.YES_NO_OPTION,JOptionPane.INFORMATION_MESSAGE ,null,options,options[0]);//throws HeadlessException
+if(selection==JOptionPane.OK_OPTION){ 
+Initialization();
+repaint();
+return;
+}
+if(selection==JOptionPane.NO_OPTION){
+System.exit(0);//退出程序
+}
+
+}catch(HeadlessException e){
+e.printStackTrace();
+}
+}
+//如果当前方没有赢棋则双方轮换
+ChangeCurrentPlayer();
+}
+
+
+
+
+
+//在当前方向上是否有连续的五只棋子
+boolean JudgeWinLine(int direction){
+int i,j,di,dj,count;
+i=j=di=dj=count=0;
+switch(direction){
+case 0:
+j=this.j-(testnum-1);
+i=this.i;
+dj=1;
+di=0;
+break;
+case 1:
+j=this.j;
+i=this.i-(testnum-1);
+dj=0;
+di=1;
+break;
+case 2:
+j=this.j-(testnum-1);
+i=this.i+(testnum-1);
+dj=1;
+di=-1;
+break;
+case 3:
+j=this.j-(testnum-1);
+i=this.i-(testnum-1);
+dj=1;
+di=1;
+break;
+}
+
+for(int k=0;k<testnum*2+1;k++){
+if(j>=0&&j<18&&i>=0&&i<18){
+if(ChessState[i][j]==Cplayer.getCurrentIdentify()){
+count++;
+if(count>=testnum)
+return true;
+}
+else
+count=0;
+}
+j+=dj;
+i+=di;
+} 
+return false;
+}
+
+
+
+
+//更换当前玩家
+void ChangeCurrentPlayer(){
+if(Cplayer==Black){
+Cplayer=White;
+textBlack.setText(Nothing);
+textWhite.setText(textwhite);
+}
+else{
+Cplayer=Black;
+textBlack.setText(textblack);
+textWhite.setText(Nothing);
+}
+}
+
+
+
+
+
+
+//重新开局监听器
+private class RestartListener implements ActionListener{
+
+public void actionPerformed(ActionEvent arg0) {
+
+Initialization();
+repaint();
+requestFocus();
+} 
+}
+
+
+
+
+
+
+//棋盘、棋局状态监听器
+private class ChessManPerformListener implements KeyListener{
+
+
+//玩家2的按键
+public void keyPressed(KeyEvent event) {
+int keyCode=event.getKeyCode();
+if(keyCode==KeyEvent.VK_ESCAPE)
+System.exit(0);
+if(Cplayer.getCurrentIdentify()==2){//判别当前玩家
+if(keyCode==KeyEvent.VK_LEFT){
+if(cursor.x>40)
+cursor.x-=20;
+}
+else if(keyCode==KeyEvent.VK_RIGHT){
+if(cursor.x<380)
+cursor.x+=20;
+}
+else if(keyCode==KeyEvent.VK_UP){
+if(cursor.y>60)
+cursor.y-=20;
+}
+else if(keyCode==KeyEvent.VK_DOWN){
+if(cursor.y<400)
+cursor.y+=20;
+}
+else if(keyCode==KeyEvent.VK_ENTER){
+if(!isChessState()){
+Cplayer.PerformChessMan();
+RecordChessState();
+repaint();
+JudgeWin();//判定当前落子后是否赢棋
+
+}
+
+} 
+repaint(); 
+}
+}
+
+
+
+
+
+
+public void keyReleased(KeyEvent event) {}
+
+
+
+
+//玩家1的按键
+public void keyTyped(KeyEvent event) {
+
+char keyChar=event.getKeyChar();
+if(Cplayer.getCurrentIdentify()==1){//判别当前玩家
+if(keyChar=='a'){
+if(cursor.x>40)//对移动光标超界现象做判别
+cursor.x-=20;
+}
+else if(keyChar=='d'){
+if(cursor.x<380) 
+cursor.x+=20;
+}
+else if(keyChar=='w'){
+if(cursor.y>60)
+cursor.y-=20;
+}
+else if(keyChar=='s'){
+if(cursor.y<400)
+cursor.y+=20;
+} 
+else if(keyChar==' '){
+if(!isChessState()){ //落子前先判断当前位置上是否已有棋子
+Cplayer.PerformChessMan();//落子 
+RecordChessState();//记录当前落子后棋盘状态
+repaint();
+JudgeWin();//判定当前落子后是否赢棋
+
+} 
+}
+
+}
+repaint(); 
+}
+
+}
+
+}
+
+ChessMan.java
+import java.awt.Color;
+
+class ChessMan {
+
+private static final int ChessManSize=20;
+private Color ChessManColor;
+
+ChessMan(Color c){
+ChessManColor=c;
+}
+
+
+
+static int getChessManSize(){
+return ChessManSize;
+}
+
+
+Color getChessManColor(){
+return ChessManColor;
+}
+
+
+}
+
+Player.java 
+import java.awt.Color;
+
+
+class Player {
+
+private int identify;
+private ChessMan pChessMan;
+private String PlayerStringIdentify;
+
+
+Player(int identify,Color c,String sIdentify){
+this.identify=identify;
+pChessMan=new ChessMan(c);
+this.PlayerStringIdentify=sIdentify;
+}
+
+
+int getCurrentIdentify(){
+return identify;
+}
+
+
+
+String getsIdentify(){
+return PlayerStringIdentify;
+}
+
+void PerformChessMan(){}
+
+
+Color getplayerChessManColor(){
+return pChessMan.getChessManColor();
+}
+}
